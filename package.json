@@ -45,6 +45,7 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
+    "rollup": "rollup -c -w",
     "watch": "concurrently \"rollup -c -w\" \"tsc -watch -p ./\"",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",

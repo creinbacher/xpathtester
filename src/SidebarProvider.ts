@@ -35,6 +35,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           vscode.window.showErrorMessage(data.value);
           break;
         }
+        case "onCheck": {
+          if (!data.value) {
+            return;
+          }
+          vscode.window.showInformationMessage(
+            "Hello from onCheck: " + JSON.stringify(data.value)
+          );
+          break;
+        }
       }
     });
   }
@@ -73,7 +82,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 				<link href="${styleResetUri}" rel="stylesheet">
 				<link href="${styleVSCodeUri}" rel="stylesheet">
-                <link href="${styleMainUri}" rel="stylesheet">
+        <link href="${styleMainUri}" rel="stylesheet">
+        <script nonce="${nonce}">
+          const tsvscode = acquireVsCodeApi();
+        </script>
 			</head>
             <body>
 				<script nonce="${nonce}" src="${scriptUri}"></script>
