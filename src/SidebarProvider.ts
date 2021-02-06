@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { getNonce } from "./getNonce";
+import { Query } from "./types";
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
   _view?: vscode.WebviewView;
@@ -39,13 +40,38 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           if (!data.value) {
             return;
           }
-          vscode.window.showInformationMessage(
-            "Hello from onCheck: " + JSON.stringify(data.value)
-          );
+          this.checkXPath(data.value);
           break;
         }
       }
     });
+  }
+
+  private checkXPath(query: Query) {
+    if (!query.expression) {
+      return;
+    }
+    const { activeTextEditor } = vscode.window;
+
+    if (!activeTextEditor) {
+      vscode.window.showInformationMessage("No active text editor");
+      return;
+    }
+    const xml = activeTextEditor.document.getText();
+
+    const xpath = require("xpath"),
+      dom = require("xmldom").DOMParser;
+    const doc = new dom().parseFromString(xml);
+    const nodes = xpath.select(query.expression, doc) as any[];
+    console.log("nodes: " + nodes);
+    if (!nodes || nodes.length === 0) {
+      vscode.window.showInformationMessage(
+        "Epression not found in given XML Document"
+      );
+    } else {
+      console.log(nodes[0].localName + ": " + nodes[0].firstChild.data);
+      console.log("Node: " + nodes[0].toString());
+    }
   }
 
   public revive(panel: vscode.WebviewView) {
