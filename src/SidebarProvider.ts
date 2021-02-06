@@ -6,6 +6,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   _view?: vscode.WebviewView;
   _doc?: vscode.TextDocument;
 
+  private xpath = require("xpath");
+  private dom = require("xmldom").DOMParser;
+
   constructor(private readonly _extensionUri: vscode.Uri) {}
 
   public resolveWebviewView(webviewView: vscode.WebviewView) {
@@ -57,21 +60,64 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       vscode.window.showInformationMessage("No active text editor");
       return;
     }
-    const xml = activeTextEditor.document.getText();
 
-    const xpath = require("xpath"),
-      dom = require("xmldom").DOMParser;
-    const doc = new dom().parseFromString(xml);
-    const nodes = xpath.select(query.expression, doc) as any[];
-    console.log("nodes: " + nodes);
-    if (!nodes || nodes.length === 0) {
+    const xml = activeTextEditor.document.getText();
+    const doc = new this.dom().parseFromString(xml);
+
+    if (query.contextnode) {
+      this.evaluateXPath(query, doc);
+    } else {
+      this.selectXPath(query.expression, doc);
+    }
+  }
+
+  private evaluateXPath(query: Query, doc: any) {
+    let contextNodes = this.selectXPath(query.contextnode, doc);
+    if (!contextNodes || contextNodes.length === 0) {
       vscode.window.showInformationMessage(
-        "Epression not found in given XML Document"
+        "Epression not found in given XML document"
       );
     } else {
-      console.log(nodes[0].localName + ": " + nodes[0].firstChild.data);
-      console.log("Node: " + nodes[0].toString());
+      contextNodes.forEach((contextNode) => {
+        console.log("Node: " + contextNode.toString());
+
+        var results = this.xpath.evaluate(
+          "." + query.expression, // xpathExpression
+          contextNode, // contextNode
+          null, // namespaceResolver
+          this.xpath.XPathResult.ANY_TYPE, // resultType
+          null // result
+        );
+
+        console.log("Results: " + results.toString());
+        if (!results) {
+          vscode.window.showInformationMessage(
+            "Epression not found for given XML document and context node"
+          );
+        } else {
+          let result = results.iterateNext();
+          while (result) {
+            console.log("Result-Node: " + result.toString());
+
+            result = results.iterateNext();
+          }
+        }
+      });
     }
+  }
+
+  private selectXPath(expression: string, doc: any): any[] {
+    const nodes = this.xpath.select(expression, doc);
+
+    if (!nodes || nodes.length === 0) {
+      vscode.window.showInformationMessage(
+        "Epression not found in given XML document"
+      );
+    } else {
+      console.log("Number of Nodes found: " + nodes.length);
+      return nodes;
+    }
+    return [];
   }
 
   public revive(panel: vscode.WebviewView) {
