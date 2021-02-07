@@ -7,6 +7,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   _view?: vscode.WebviewView;
   _doc?: vscode.TextDocument;
 
+  private xpathResultDecorationType = vscode.window.createTextEditorDecorationType(
+    {
+      borderWidth: "1px",
+      borderStyle: "solid",
+      overviewRulerColor: "blue",
+      overviewRulerLane: vscode.OverviewRulerLane.Right,
+      light: {
+        // this color will be used in light color themes
+        borderColor: "darkblue",
+        backgroundColor: "#FF000055",
+      },
+      dark: {
+        // this color will be used in dark color themes
+        borderColor: "lightblue",
+        backgroundColor: "#FF000055",
+      },
+    }
+  );
+
   constructor(
     private readonly _extensionUri: vscode.Uri,
     private readonly xpathWrapper: XPathWrapper
@@ -62,6 +81,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    activeTextEditor.setDecorations(this.xpathResultDecorationType, []);
+
     const xml = activeTextEditor.document.getText();
     if (!xml) {
       vscode.window.showInformationMessage(
@@ -70,11 +91,43 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    let queryResult: string[];
     try {
-      this.xpathWrapper.checkXPath(query, xml);
+      queryResult = this.xpathWrapper.checkXPath(query, xml);
+      this.updateDecorations(queryResult);
     } catch (e) {
       vscode.window.showInformationMessage(e.message);
     }
+  }
+
+  private updateDecorations(queryResult: string[]) {
+    const { activeTextEditor } = vscode.window;
+
+    if (!activeTextEditor) {
+      return;
+    }
+    const text = activeTextEditor.document.getText();
+    const xpathResults: vscode.DecorationOptions[] = [];
+
+    let match;
+    queryResult.forEach((result) => {
+      match = text.indexOf(result);
+      const startPos = activeTextEditor.document.positionAt(match);
+      const endPos = activeTextEditor.document.positionAt(
+        match + result.length
+      );
+
+      const decoration = {
+        range: new vscode.Range(startPos, endPos),
+        hoverMessage: "Result **" + result + "**",
+      };
+      xpathResults.push(decoration);
+    });
+
+    activeTextEditor.setDecorations(
+      this.xpathResultDecorationType,
+      xpathResults
+    );
   }
 
   public revive(panel: vscode.WebviewView) {

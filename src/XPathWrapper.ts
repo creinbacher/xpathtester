@@ -4,24 +4,33 @@ export class XPathWrapper {
   private xpath = require("xpath");
   private dom = require("xmldom").DOMParser;
 
-  public checkXPath(query: Query, xml: String) {
+  public checkXPath(query: Query, xml: string): string[] {
     if (!query.expression) {
-      return;
+      return [];
     }
     const doc = new this.dom().parseFromString(xml);
 
     if (query.contextnode) {
-      this.evaluateXPath(query, doc);
+      return this.nodesToResultArray(this.evaluateXPath(query, doc));
     } else {
-      this.selectXPath(query.expression, doc);
+      return this.nodesToResultArray(this.selectXPath(query.expression, doc));
     }
   }
 
-  private evaluateXPath(query: Query, doc: any) {
+  private nodesToResultArray(nodeArray: any[]): string[] {
+    let resultArray: string[] = [];
+    nodeArray.forEach((node) => {
+      resultArray.push(node.toString());
+    });
+    return resultArray;
+  }
+
+  private evaluateXPath(query: Query, doc: any): any[] {
     let contextNodes = this.selectXPath(query.contextnode, doc);
+    let resultArray: any[] = [];
 
     contextNodes.forEach((contextNode) => {
-      console.log("Node: " + contextNode.toString());
+      console.log("Context-Node: " + contextNode.toString());
 
       var results = this.xpath.evaluate(
         "." + query.expression, // xpathExpression
@@ -42,13 +51,15 @@ export class XPathWrapper {
         );
       } else {
         let result = results.iterateNext();
-        while (result) {
-          console.log("Result-Node: " + result.toString());
 
+        while (result) {
+          resultArray.push(result);
           result = results.iterateNext();
         }
       }
     });
+
+    return resultArray;
   }
 
   private selectXPath(expression: string, doc: any): any[] {
