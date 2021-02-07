@@ -33,7 +33,7 @@
       cnode = "";
     }}
   >
-    <label for="expression">X-Path Expression:</label>
+    <label for="expression">XPath Expression:</label>
     <input
       id="expression"
       name="expression"
