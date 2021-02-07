@@ -1,4 +1,9 @@
 export type Query = {
   expression: string;
-  contextnode: string;
+  contextNode: string;
+};
+
+export type QueryResult = {
+  foundNode: string;
+  contextNode?: string;
 };

@@ -1,33 +1,35 @@
-import { Query } from "./types";
+import { Query, QueryResult } from "./types";
 
 export class XPathWrapper {
   private xpath = require("xpath");
   private dom = require("xmldom").DOMParser;
 
-  public checkXPath(query: Query, xml: string): string[] {
+  public checkXPath(query: Query, xml: string): QueryResult[] {
     if (!query.expression) {
       return [];
     }
     const doc = new this.dom().parseFromString(xml);
 
-    if (query.contextnode) {
-      return this.nodesToResultArray(this.evaluateXPath(query, doc));
+    if (query.contextNode) {
+      return this.evaluateXPath(query, doc);
     } else {
       return this.nodesToResultArray(this.selectXPath(query.expression, doc));
     }
   }
 
-  private nodesToResultArray(nodeArray: any[]): string[] {
-    let resultArray: string[] = [];
-    nodeArray.forEach((node) => {
-      resultArray.push(node.toString());
-    });
+  private nodesToResultArray(nodeArray: any[]): QueryResult[] {
+    let resultArray: QueryResult[] = [];
+    nodeArray.forEach((node) =>
+      resultArray.push({
+        foundNode: node.toString(),
+      })
+    );
     return resultArray;
   }
 
-  private evaluateXPath(query: Query, doc: any): any[] {
-    let contextNodes = this.selectXPath(query.contextnode, doc);
-    let resultArray: any[] = [];
+  private evaluateXPath(query: Query, doc: any): QueryResult[] {
+    let contextNodes = this.selectXPath(query.contextNode, doc);
+    let resultArray: QueryResult[] = [];
 
     contextNodes.forEach((contextNode) => {
       console.log("Context-Node: " + contextNode.toString());
@@ -46,14 +48,17 @@ export class XPathWrapper {
           "Expression '" +
             query.expression +
             "'not found in for context node '" +
-            query.contextnode +
+            query.contextNode +
             "'"
         );
       } else {
         let result = results.iterateNext();
 
         while (result) {
-          resultArray.push(result);
+          resultArray.push({
+            contextNode: contextNode.toString(),
+            foundNode: result.toString(),
+          });
           result = results.iterateNext();
         }
       }

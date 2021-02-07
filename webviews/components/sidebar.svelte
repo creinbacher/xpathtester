@@ -9,7 +9,7 @@
     console.log("check called: " + exp);
     tsvscode.postMessage({
       type: "onCheck",
-      value: { expression: exp, contextnode: context },
+      value: { expression: exp, contextNode: context },
     });
   }
 
