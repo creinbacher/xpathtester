@@ -1,16 +1,21 @@
 {
   "name": "xpathtester",
-  "displayName": "xpath_tester",
-  "description": "",
-  "version": "0.0.1",
+  "displayName": "XPath Tester",
+  "description": "This extension lets you evaluate XPath expressions from the sidebar",
+  "version": "1.0.0",
+  "publisher": "creinbacher",
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "vscode": "^1.52.0"
   },
   "categories": [
     "Other"
   ],
+  "keywords": [
+    "xpath"
+  ],
+  "preview": true,
   "activationEvents": [
-    "onCommand:xpathtester.helloWorld",
     "onView:xpathtester-sidebar"
   ],
   "main": "./out/extension.js",
@@ -79,5 +84,13 @@
   "dependencies": {
     "xmldom": "^0.4.0",
     "xpath": "0.0.32"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/creinbacher/xpathtester/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/creinbacher/xpathtester.git"
+  },
+  "homepage": "https://github.com/creinbacher/xpathtester/blob/master/README.md"
 }

@@ -1,4 +1,4 @@
-# XPathtester README
+# XPath Tester README
 
 This extension allows you to evaluate simple XPath expressions on the currently opened document. All matches are highlighted.
 
@@ -17,7 +17,7 @@ This extension allows you to evaluate simple XPath expressions on the currently 
 
 ### 1.0.0
 
-Initial release of the XPathtester extension
+Initial release of the XPath Tester extension
 
 ## Future plans
 
