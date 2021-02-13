@@ -112,7 +112,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     );
     const decoration = {
       range: new vscode.Range(startPos, endPos),
-      hoverMessage: "Result **" + result.foundNode + "**",
+      hoverMessage:
+        "Node **" +
+        result.foundNode.nodeName +
+        "** is of NodeType **" +
+        result.foundNode.nodeType +
+        "**",
     };
     xpathResults.push(decoration);
   }
@@ -123,12 +128,17 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     if (!activeTextEditor) {
       return;
     }
+    let xpathOut = vscode.window.createOutputChannel("XPath");
+
     const text = activeTextEditor.document.getText();
     const xpathResults: vscode.DecorationOptions[] = [];
 
     let match: number;
     queryResult.forEach((result) => {
       if (result.contextNode) {
+        xpathOut.appendLine(
+          "Context-Node at line: " + result.contextNode.lineNumber
+        );
         //we need to search for children only inside the context node
         let foundIndex = text.indexOf(result.contextNode.textContent, 0);
         let foundLastIndex = -1;

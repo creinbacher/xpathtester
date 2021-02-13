@@ -72,15 +72,26 @@ export class XPathWrapper {
   }
 
   private createResultNode(node: any): ResultNode {
+    return this.createResultNodeWithParent(node, true);
+  }
+
+  private createResultNodeWithParent(
+    node: any,
+    addParent: boolean
+  ): ResultNode {
     let resultNode = {
       nodeType: this.mapNodeType(node.nodeType),
+      nodeName: node.nodeName,
       columnNumber: node.columnNumber,
       lineNumber: node.lineNumber,
       textContent: node.toString(),
     } as ResultNode;
 
-    if (node.parentNode) {
-      resultNode.parentNode = this.createResultNode(node.parentNode);
+    if (addParent && node.parentNode) {
+      resultNode.parentNode = this.createResultNodeWithParent(
+        node.parentNode,
+        false
+      );
     }
     return resultNode;
   }

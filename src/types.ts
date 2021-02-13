@@ -18,7 +18,7 @@ export type ResultNode = {
   parentNode?: ResultNode;
   textContent: string;
   localName?: string;
-  nodeName?: string;
+  nodeName: string;
   nodeValue?: string;
   tagName?: string;
   childNodes?: ResultNode[];
