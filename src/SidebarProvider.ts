@@ -108,7 +108,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   ) {
     const startPos = activeTextEditor.document.positionAt(match);
     const endPos = activeTextEditor.document.positionAt(
-      match + result.foundNode.length
+      match + result.foundNode.textContent.length
     );
     const decoration = {
       range: new vscode.Range(startPos, endPos),
@@ -130,27 +130,30 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     queryResult.forEach((result) => {
       if (result.contextNode) {
         //we need to search for children only inside the context node
-        let foundIndex = text.indexOf(result.contextNode, 0);
+        let foundIndex = text.indexOf(result.contextNode.textContent, 0);
         let foundLastIndex = -1;
         while (foundIndex > -1) {
-          match = text.indexOf(result.foundNode, foundIndex);
-          foundLastIndex = match + result.contextNode.length;
+          match = text.indexOf(result.foundNode.textContent, foundIndex);
+          foundLastIndex = match + result.contextNode.textContent.length;
           while (match > -1 && match < foundLastIndex) {
             this.addDecoration(activeTextEditor, match, result, xpathResults);
             match = text.indexOf(
-              result.foundNode,
-              match + result.foundNode.length
+              result.foundNode.textContent,
+              match + result.foundNode.textContent.length
             );
           }
-          foundIndex = text.indexOf(result.contextNode, foundLastIndex - 1);
+          foundIndex = text.indexOf(
+            result.contextNode.textContent,
+            foundLastIndex - 1
+          );
         }
       } else {
-        match = text.indexOf(result.foundNode);
+        match = text.indexOf(result.foundNode.textContent);
         while (match > -1) {
           this.addDecoration(activeTextEditor, match, result, xpathResults);
           match = text.indexOf(
-            result.foundNode,
-            match + result.foundNode.length
+            result.foundNode.textContent,
+            match + result.foundNode.textContent.length
           );
         }
       }
