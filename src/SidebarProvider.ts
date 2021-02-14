@@ -102,14 +102,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
   private addDecoration(
     activeTextEditor: vscode.TextEditor,
-    match: number,
+    startPosition: number,
+    endPosition: number,
     result: QueryResult,
     xpathResults: vscode.DecorationOptions[]
   ) {
-    const startPos = activeTextEditor.document.positionAt(match);
-    const endPos = activeTextEditor.document.positionAt(
-      match + result.foundNode.textContent.length
-    );
+    const startPos = activeTextEditor.document.positionAt(startPosition);
+    const endPos = activeTextEditor.document.positionAt(endPosition);
+
     const decoration = {
       range: new vscode.Range(startPos, endPos),
       hoverMessage:
@@ -122,15 +122,57 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     xpathResults.push(decoration);
   }
 
+  private applyDecorations(
+    activeTextEditor: vscode.TextEditor,
+    match: number,
+    text: string,
+    result: QueryResult,
+    xpathResults: vscode.DecorationOptions[]
+  ) {
+    if (
+      "Element" === result.foundNode.nodeType &&
+      result.foundNode.childNodes
+    ) {
+      // calculate decoration for opening and closing tags
+      this.addDecoration(
+        activeTextEditor,
+        match,
+        text.indexOf(">", match) + 1,
+        result,
+        xpathResults
+      );
+
+      if (result.foundNode.textContent) {
+        this.addDecoration(
+          activeTextEditor,
+          text.indexOf("</" + result.foundNode.tagName, match),
+          match + result.foundNode.textContent.length,
+          result,
+          xpathResults
+        );
+      }
+    } else {
+      this.addDecoration(
+        activeTextEditor,
+        match,
+        match + result.foundNode.textContent.length,
+        result,
+        xpathResults
+      );
+    }
+  }
+
   private updateDecorations(queryResult: QueryResult[]) {
     const { activeTextEditor } = vscode.window;
 
     if (!activeTextEditor) {
       return;
     }
-    let xpathOut = vscode.window.createOutputChannel("XPath");
+    let xpathOut: vscode.OutputChannel = vscode.window.createOutputChannel(
+      "XPath"
+    );
 
-    const text = activeTextEditor.document.getText();
+    const text: string = activeTextEditor.document.getText();
     const xpathResults: vscode.DecorationOptions[] = [];
 
     let match: number;
@@ -146,7 +188,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           match = text.indexOf(result.foundNode.textContent, foundIndex);
           foundLastIndex = match + result.contextNode.textContent.length;
           while (match > -1 && match < foundLastIndex) {
-            this.addDecoration(activeTextEditor, match, result, xpathResults);
+            this.applyDecorations(
+              activeTextEditor,
+              match,
+              text,
+              result,
+              xpathResults
+            );
             match = text.indexOf(
               result.foundNode.textContent,
               match + result.foundNode.textContent.length
@@ -160,7 +208,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       } else {
         match = text.indexOf(result.foundNode.textContent);
         while (match > -1) {
-          this.addDecoration(activeTextEditor, match, result, xpathResults);
+          this.applyDecorations(
+            activeTextEditor,
+            match,
+            text,
+            result,
+            xpathResults
+          );
           match = text.indexOf(
             result.foundNode.textContent,
             match + result.foundNode.textContent.length

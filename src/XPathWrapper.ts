@@ -12,6 +12,7 @@ export class XPathWrapper {
     try {
       doc = new this.dom().parseFromString(xml);
     } catch (e) {
+      console.error(e);
       throw new Error("Given document could not be parsed as XML");
     }
 
@@ -72,12 +73,13 @@ export class XPathWrapper {
   }
 
   private createResultNode(node: any): ResultNode {
-    return this.createResultNodeWithParent(node, true);
+    return this.createResultNodeWithParentAndChildren(node, true, true);
   }
 
-  private createResultNodeWithParent(
+  private createResultNodeWithParentAndChildren(
     node: any,
-    addParent: boolean
+    addParent: boolean,
+    addChildren: boolean
   ): ResultNode {
     let resultNode = {
       nodeType: this.mapNodeType(node.nodeType),
@@ -87,12 +89,39 @@ export class XPathWrapper {
       textContent: node.toString(),
     } as ResultNode;
 
+    if (node.length) {
+      resultNode.length = node.length;
+    }
+    if (node.localName) {
+      resultNode.localName = node.localName;
+    }
+    if (node.nodeValue) {
+      resultNode.nodeValue = node.nodeValue;
+    }
+    if (node.tagName) {
+      resultNode.tagName = node.tagName;
+    }
     if (addParent && node.parentNode) {
-      resultNode.parentNode = this.createResultNodeWithParent(
+      resultNode.parentNode = this.createResultNodeWithParentAndChildren(
         node.parentNode,
+        false,
         false
       );
     }
+
+    if (addChildren && node.childNodes) {
+      resultNode.childNodes = [];
+      for (let i = 0; i < node.childNodes.length; i++) {
+        resultNode.childNodes?.push(
+          this.createResultNodeWithParentAndChildren(
+            node.childNodes[i],
+            false,
+            false
+          )
+        );
+      }
+    }
+
     return resultNode;
   }
 
@@ -104,13 +133,21 @@ export class XPathWrapper {
     contextNodes.forEach((contextNode) => {
       console.log("Context-Node: " + contextNode.toString());
       const contextNodeAsResultNode = this.createResultNode(contextNode);
-      var results = this.xpath.evaluate(
-        expression, // xpathExpression
-        contextNode, // contextNode
-        null, // namespaceResolver
-        this.xpath.XPathResult.ANY_TYPE, // resultType
-        null // result
-      );
+      let results: any;
+      try {
+        results = this.xpath.evaluate(
+          expression, // xpathExpression
+          contextNode, // contextNode
+          null, // namespaceResolver
+          this.xpath.XPathResult.ANY_TYPE, // resultType
+          null // result
+        );
+      } catch (e) {
+        console.error(e);
+        throw new Error(
+          "Expression '" + expression + "'is not a valid XPath Query"
+        );
+      }
 
       console.log("Results: " + results.toString());
       if (!results) {
@@ -138,7 +175,15 @@ export class XPathWrapper {
   }
 
   private selectXPath(expression: string, doc: any): any[] {
-    const nodes = this.xpath.select(expression, doc);
+    let nodes: any[];
+    try {
+      nodes = this.xpath.select(expression, doc);
+    } catch (e) {
+      console.error(e);
+      throw new Error(
+        "Expression '" + expression + "'is not a valid XPath Query"
+      );
+    }
 
     if (!nodes || nodes.length === 0) {
       throw new Error(
