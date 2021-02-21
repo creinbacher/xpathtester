@@ -6,6 +6,7 @@ import { XPathWrapper } from "./XPathWrapper";
 export class SidebarProvider implements vscode.WebviewViewProvider {
   _view?: vscode.WebviewView;
   _doc?: vscode.TextDocument;
+  xpathOut: vscode.OutputChannel;
 
   private xpathResultDecorationType = vscode.window.createTextEditorDecorationType(
     {
@@ -29,7 +30,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly _extensionUri: vscode.Uri,
     private readonly xpathWrapper: XPathWrapper
-  ) {}
+  ) {
+    this.xpathOut = vscode.window.createOutputChannel("XPath");
+  }
 
   public resolveWebviewView(webviewView: vscode.WebviewView) {
     this._view = webviewView;
@@ -72,6 +75,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
   private checkXPath(query: Query) {
     if (!query.expression) {
+      vscode.window.showInformationMessage("Please enter an expression");
       return;
     }
     const { activeTextEditor } = vscode.window;
@@ -143,10 +147,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       );
 
       if (result.foundNode.textContent) {
+        //closing tags
+        const startPosition = this.findIndexOfTag(
+          text,
+          "</" + result.foundNode.tagName,
+          match
+        );
         this.addDecoration(
           activeTextEditor,
-          text.indexOf("</" + result.foundNode.tagName, match),
-          match + result.foundNode.textContent.length,
+          startPosition,
+          text.indexOf(">", startPosition) + 1,
           result,
           xpathResults
         );
@@ -162,52 +172,69 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private updateDecorations(queryResult: QueryResult[]) {
-    const { activeTextEditor } = vscode.window;
+  private findIndexOfTag(
+    textToSearchIn: string,
+    tagToFind: string,
+    startIndex: number
+  ): number {
+    let foundIndex = textToSearchIn.indexOf(tagToFind, startIndex);
+    while (foundIndex > -1) {
+      //only when the text at found index ends in a space or > we really found the tag
+      let nextCharacter = textToSearchIn.substr(
+        foundIndex + tagToFind.length,
+        1
+      );
+      if (" " === nextCharacter || ">" === nextCharacter) {
+        return foundIndex;
+      }
+      foundIndex = textToSearchIn.indexOf(tagToFind, foundIndex + 1);
+    }
+    return -1;
+  }
 
-    if (!activeTextEditor) {
+  private updateDecorationsForNode(
+    result: QueryResult,
+    startOfContextNodeInDom: number,
+    endOfContextNode: number,
+    text: string,
+    textAsDom: string,
+    activeTextEditor: vscode.TextEditor,
+    xpathResults: vscode.DecorationOptions[]
+  ) {
+    //depending on the indexInContext we have to highlight the correct node
+    if (
+      undefined === result.foundNode.indexInContext ||
+      result.foundNode.indexInContext < 0 ||
+      undefined === result.contextNode?.numberOfNodesInContext
+    ) {
       return;
     }
-    let xpathOut: vscode.OutputChannel = vscode.window.createOutputChannel(
-      "XPath"
+    let match = textAsDom.indexOf(
+      result.foundNode.textContent,
+      startOfContextNodeInDom
     );
-
-    const text: string = activeTextEditor.document.getText();
-    const xpathResults: vscode.DecorationOptions[] = [];
-
-    let match: number;
-    queryResult.forEach((result) => {
-      if (result.contextNode) {
-        xpathOut.appendLine(
-          "Context-Node at line: " + result.contextNode.lineNumber
+    let nextMatch = textAsDom.indexOf(result.foundNode.textContent, match + 1);
+    if (nextMatch < 0) {
+      //we only have one match => apply decorations
+      match = this.findIndexOfTag(text, "<" + result.foundNode.tagName, match);
+      this.applyDecorations(
+        activeTextEditor,
+        match,
+        text,
+        result,
+        xpathResults
+      );
+      return;
+    }
+    let counter = 0;
+    while (counter < result.contextNode.numberOfNodesInContext) {
+      if (counter === result.foundNode.indexInContext) {
+        match = this.findIndexOfTag(
+          text,
+          "<" + result.foundNode.tagName,
+          match
         );
-        //we need to search for children only inside the context node
-        let foundIndex = text.indexOf(result.contextNode.textContent, 0);
-        let foundLastIndex = -1;
-        while (foundIndex > -1) {
-          match = text.indexOf(result.foundNode.textContent, foundIndex);
-          foundLastIndex = match + result.contextNode.textContent.length;
-          while (match > -1 && match < foundLastIndex) {
-            this.applyDecorations(
-              activeTextEditor,
-              match,
-              text,
-              result,
-              xpathResults
-            );
-            match = text.indexOf(
-              result.foundNode.textContent,
-              match + result.foundNode.textContent.length
-            );
-          }
-          foundIndex = text.indexOf(
-            result.contextNode.textContent,
-            foundLastIndex - 1
-          );
-        }
-      } else {
-        match = text.indexOf(result.foundNode.textContent);
-        while (match > -1) {
+        if (match < endOfContextNode) {
           this.applyDecorations(
             activeTextEditor,
             match,
@@ -215,9 +242,82 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             result,
             xpathResults
           );
-          match = text.indexOf(
+          return;
+        }
+      } else {
+        match = textAsDom.indexOf(result.foundNode.textContent, match + 1);
+        counter++;
+      }
+    }
+  }
+
+  private updateDecorations(queryResult: QueryResult[]) {
+    const { activeTextEditor } = vscode.window;
+
+    if (!activeTextEditor) {
+      return;
+    }
+
+    const text: string = activeTextEditor.document.getText();
+    const textAsDom: string = this.xpathWrapper.getDomAsString(text);
+    const xpathResults: vscode.DecorationOptions[] = [];
+
+    let match: number;
+    queryResult.forEach((result) => {
+      if (result.contextNode) {
+        this.xpathOut.appendLine(
+          "Context-Node at line: " + result.contextNode.lineNumber
+        );
+        //we need to search for children only inside the context node
+        let startOfContextNodeInDom = textAsDom.indexOf(
+          result.contextNode.textContent,
+          0
+        );
+        let startOfContextNode = this.findIndexOfTag(
+          text,
+          "<" + result.contextNode.tagName,
+          startOfContextNodeInDom
+        );
+        let endOfContextNode = this.findIndexOfTag(
+          text,
+          "</" + result.contextNode.tagName,
+          startOfContextNode
+        );
+
+        this.updateDecorationsForNode(
+          result,
+          startOfContextNodeInDom,
+          endOfContextNode,
+          text,
+          textAsDom,
+          activeTextEditor,
+          xpathResults
+        );
+      } else {
+        match = textAsDom.indexOf(result.foundNode.textContent);
+        while (match > -1) {
+          //we need to reset match because it can differ from the content of the window to how it is represented in the dom
+          match = this.findIndexOfTag(
+            text,
+            "<" + result.foundNode.tagName,
+            match
+          );
+          this.applyDecorations(
+            activeTextEditor,
+            match,
+            text,
+            result,
+            xpathResults
+          );
+
+          const foundLastIndex = this.findIndexOfTag(
+            text,
+            "</" + result.foundNode.tagName,
+            match
+          );
+          match = textAsDom.indexOf(
             result.foundNode.textContent,
-            match + result.foundNode.textContent.length
+            foundLastIndex
           );
         }
       }

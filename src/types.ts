@@ -15,6 +15,8 @@ export type ResultNode = {
   columnNumber: number;
   lineNumber: number;
   length?: number;
+  indexInContext?: number;
+  numberOfNodesInContext?: number;
   parentNode?: ResultNode;
   textContent: string;
   localName?: string;

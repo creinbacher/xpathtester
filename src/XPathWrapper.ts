@@ -23,6 +23,17 @@ export class XPathWrapper {
     }
   }
 
+  public getDomAsString(xml: string): string {
+    let doc: any;
+    try {
+      doc = new this.dom().parseFromString(xml);
+    } catch (e) {
+      console.error(e);
+      throw new Error("Given document could not be parsed as XML");
+    }
+    return doc.toString();
+  }
+
   private nodesToResultArray(nodeArray: any[]): QueryResult[] {
     let resultArray: QueryResult[] = [];
     nodeArray.forEach((node) =>
@@ -131,7 +142,6 @@ export class XPathWrapper {
     let expression = this.getExpressionForEvaluate(query);
 
     contextNodes.forEach((contextNode) => {
-      console.log("Context-Node: " + contextNode.toString());
       const contextNodeAsResultNode = this.createResultNode(contextNode);
       let results: any;
       try {
@@ -149,7 +159,6 @@ export class XPathWrapper {
         );
       }
 
-      console.log("Results: " + results.toString());
       if (!results) {
         throw new Error(
           "Expression '" +
@@ -160,14 +169,18 @@ export class XPathWrapper {
         );
       } else {
         let result = results.iterateNext();
-
+        let index = 0;
         while (result) {
+          let foundNode = this.createResultNode(result);
+          foundNode.indexInContext = index;
           resultArray.push({
             contextNode: contextNodeAsResultNode,
-            foundNode: this.createResultNode(result),
+            foundNode: foundNode,
           });
           result = results.iterateNext();
+          index++;
         }
+        contextNodeAsResultNode.numberOfNodesInContext = index;
       }
     });
 
