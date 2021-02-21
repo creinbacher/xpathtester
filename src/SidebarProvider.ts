@@ -103,12 +103,19 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       }
       if (queryResult.length === 1 && queryResult[0].numericResult) {
         this.xpathOut.appendLine(
-          "The query '" +
+          "The expression '" +
             query.expression +
             "' resulted in: " +
             queryResult[0].numericResult
         );
       } else {
+        this.xpathOut.appendLine(
+          "Found " +
+            queryResult.length +
+            " results for expression '" +
+            query.expression +
+            "'"
+        );
         this.updateDecorations(queryResult);
       }
     } catch (e) {
@@ -402,6 +409,45 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  private findMatch(
+    textToSearch: string,
+    textToFind: string,
+    startPosition: number
+  ): number {
+    let match = textToSearch.indexOf(textToFind, startPosition);
+    if (match > -1) {
+      return match;
+    }
+
+    // if we haven't found a match yet - try again after removing namespaces from textToFind
+    // first - remove all namspaces without prefix
+    let namespaceStart = textToFind.indexOf('xmlns="');
+    let namespaceEnd = -1;
+    let namespace: string;
+    while (namespaceStart > -1) {
+      namespaceEnd = textToFind.indexOf('"', namespaceStart + 7); // +7 because we have to account for 'xmlns="'
+      namespace = textToFind.substring(namespaceStart - 1, namespaceEnd + 1); //we start at namespaceStart-1 because of the spaces in front and back of the namespace
+      console.log("Found namespaces in textToFind - removing: " + namespace);
+      textToFind = textToFind.replace(namespace, "");
+
+      namespaceStart = textToFind.indexOf('xmlns="');
+    }
+
+    //now check for namespaces with prefix
+    namespaceStart = textToFind.indexOf("xmlns:");
+    while (namespaceStart > -1) {
+      namespaceEnd = textToFind.indexOf('="', namespaceStart + 1);
+      namespaceEnd = textToFind.indexOf('"', namespaceEnd + 2); // +2 because we're at the = at this point
+      namespace = textToFind.substring(namespaceStart - 1, namespaceEnd + 1);
+      console.log("Found namespaces in textToFind - removing: " + namespace);
+      textToFind = textToFind.replace(namespace, "");
+
+      namespaceStart = textToFind.indexOf("xmlns:");
+    }
+
+    return textToSearch.indexOf(textToFind, startPosition);
+  }
+
   private updateDecorationsForElementNode(
     result: QueryResult,
     textAsDom: string,
@@ -409,7 +455,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     activeTextEditor: vscode.TextEditor,
     xpathResults: vscode.DecorationOptions[]
   ) {
-    let match = textAsDom.indexOf(result.foundNode.textContent);
+    let match = this.findMatch(textAsDom, result.foundNode.textContent, 0);
     while (match > -1) {
       //we need to reset match because it can differ from the content of the window to how it is represented in the dom
       match = this.findIndexOfTag(
@@ -438,7 +484,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         );
         return;
       }
-      match = textAsDom.indexOf(
+      match = this.findMatch(
+        textAsDom,
         result.foundNode.textContent,
         foundLastIndex + 1
       );
