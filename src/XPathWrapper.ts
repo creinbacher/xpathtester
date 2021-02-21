@@ -19,7 +19,17 @@ export class XPathWrapper {
     if (query.contextNode) {
       return this.evaluateXPath(query, doc);
     } else {
-      return this.nodesToResultArray(this.selectXPath(query.expression, doc));
+      const selectedXpath = this.selectXPath(query.expression, doc);
+      if (Array.isArray(selectedXpath)) {
+        return this.nodesToResultArray(selectedXpath);
+      } else {
+        let resultArray: QueryResult[] = [];
+        resultArray.push({
+          foundNode: {} as ResultNode,
+          numericResult: selectedXpath,
+        });
+        return resultArray;
+      }
     }
   }
 

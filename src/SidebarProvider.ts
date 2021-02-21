@@ -98,7 +98,19 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     let queryResult: QueryResult[];
     try {
       queryResult = this.xpathWrapper.checkXPath(query, xml);
-      this.updateDecorations(queryResult);
+      if (!queryResult || queryResult.length === 0) {
+        return;
+      }
+      if (queryResult.length === 1 && queryResult[0].numericResult) {
+        this.xpathOut.appendLine(
+          "The query '" +
+            query.expression +
+            "' resulted in: " +
+            queryResult[0].numericResult
+        );
+      } else {
+        this.updateDecorations(queryResult);
+      }
     } catch (e) {
       vscode.window.showInformationMessage(e.message);
     }

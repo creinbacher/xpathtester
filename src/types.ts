@@ -8,6 +8,7 @@ export type Query = {
 export type QueryResult = {
   foundNode: ResultNode;
   contextNode?: ResultNode;
+  numericResult?: number;
 };
 
 export type ResultNode = {
