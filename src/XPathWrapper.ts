@@ -9,6 +9,7 @@ export class XPathWrapper {
       return [];
     }
     let doc: any;
+
     try {
       doc = new this.dom().parseFromString(xml);
     } catch (e) {
@@ -57,8 +58,10 @@ export class XPathWrapper {
   private getExpressionForEvaluate(query: Query): String {
     if (query.expression.startsWith(".")) {
       return query.expression;
-    } else {
+    } else if (query.expression.startsWith("/")) {
       return "." + query.expression;
+    } else {
+      return query.expression;
     }
   }
 
@@ -177,6 +180,8 @@ export class XPathWrapper {
             query.contextNode +
             "'"
         );
+      } else if (1 === results.resultType) {
+        console.log("result type 1");
       } else {
         let result = results.iterateNext();
         let index = 0;

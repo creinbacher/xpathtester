@@ -1,4 +1,3 @@
-import { getHeapStatistics } from "v8";
 import * as vscode from "vscode";
 import { QueryResult, ResultNode } from "./types";
 export class DecorationProcessor {
@@ -44,6 +43,7 @@ export class DecorationProcessor {
           result.contextNode
         );
 
+        this.printNodeInformation(result.foundNode); //todo: maybe handle context nodes differently
         this.updateDecorationsForNode(
           result,
           startOfContextNodeInDom,
@@ -53,6 +53,8 @@ export class DecorationProcessor {
           xpathResults
         );
       } else {
+        //the simpler case - we don't have a context node
+        this.printNodeInformation(result.foundNode);
         if (this.isElementNodeType(result.foundNode.nodeType)) {
           this.updateDecorationsForElementNode(
             result,
@@ -63,7 +65,6 @@ export class DecorationProcessor {
         } else {
           this.updateDecorationsForNonElementNode(
             result,
-            this.textAsDom,
             this.text,
             xpathResults
           );
@@ -72,6 +73,28 @@ export class DecorationProcessor {
     });
 
     return this.removeDuplicateDecorations(xpathResults);
+  }
+
+  private printNodeInformation(node: ResultNode) {
+    if (this.isTextNodeType(node.nodeType)) {
+      this.xpathOut.appendLine(
+        "Found node of type " +
+          node.nodeType +
+          " with value '" +
+          node.nodeValue +
+          "' at line " +
+          node.lineNumber
+      );
+    } else {
+      this.xpathOut.appendLine(
+        "Found node of type " +
+          node.nodeType +
+          " with name " +
+          node.nodeName +
+          " at line " +
+          node.lineNumber
+      );
+    }
   }
 
   private removeDuplicateDecorations(
@@ -154,7 +177,6 @@ export class DecorationProcessor {
 
   private updateDecorationsForNonElementNode(
     result: QueryResult,
-    textAsDom: string,
     text: string,
     xpathResults: vscode.DecorationOptions[]
   ) {
@@ -191,7 +213,7 @@ export class DecorationProcessor {
       console.log("Found namespaces in textToFind - removing: " + namespace);
       textToFind = textToFind.replace(namespace, "");
 
-      namespaceStart = textToFind.indexOf('xmlns="');
+      namespaceStart = textToFind.indexOf('xmlns="', namespaceStart + 1);
     }
 
     //now check for namespaces with prefix
@@ -203,7 +225,7 @@ export class DecorationProcessor {
       console.log("Found namespaces in textToFind - removing: " + namespace);
       textToFind = textToFind.replace(namespace, "");
 
-      namespaceStart = textToFind.indexOf("xmlns:");
+      namespaceStart = textToFind.indexOf("xmlns:", namespaceStart + 1);
     }
 
     return textToSearch.indexOf(textToFind, startPosition);
@@ -338,5 +360,9 @@ export class DecorationProcessor {
 
   private isElementNodeType(nodeType: string): boolean {
     return "Element" === nodeType;
+  }
+
+  private isTextNodeType(nodeType: string): boolean {
+    return "Text" === nodeType;
   }
 }

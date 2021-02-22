@@ -105,30 +105,49 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     let queryResult: QueryResult[];
     try {
+      const startTime = new Date();
+      this.xpathOut.clear();
       queryResult = this.xpathWrapper.checkXPath(query, xml);
       if (!queryResult || queryResult.length === 0) {
         return;
       }
       if (queryResult.length === 1 && queryResult[0].numericResult) {
-        this.xpathOut.appendLine(
-          "The expression '" +
-            query.expression +
-            "' resulted in: " +
-            queryResult[0].numericResult
-        );
+        let out = "The expression '" + query.expression;
+        out += this.checkForContext(query.contextNode);
+        out += "' resulted in: " + queryResult[0].numericResult;
+        this.xpathOut.appendLine(out);
       } else {
-        this.xpathOut.appendLine(
+        let out =
           "Found " +
-            queryResult.length +
-            " results for expression '" +
-            query.expression +
-            "'"
-        );
+          queryResult.length +
+          " results for expression '" +
+          query.expression;
+        out += this.checkForContext(query.contextNode);
+        out += "'";
+        this.xpathOut.appendLine(out);
         this.updateDecorations(queryResult);
+        this.printDuration(query.expression, query.contextNode, startTime);
       }
     } catch (e) {
       vscode.window.showInformationMessage(e.message);
+      console.error(e);
     }
+  }
+
+  private checkForContext(context: string): string {
+    if (context && "" !== context) {
+      return "' within context '" + context;
+    }
+    return "";
+  }
+
+  private printDuration(expression: string, context: string, startTime: Date) {
+    const duration = new Date().getTime() - startTime.getTime();
+
+    let durationText = "The expression '" + expression;
+    durationText += this.checkForContext(context);
+    durationText += "' took " + duration / 1000 + " seconds to evaluate";
+    this.xpathOut.appendLine(durationText);
   }
 
   private updateDecorations(queryResult: QueryResult[]) {
