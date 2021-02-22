@@ -55,14 +55,21 @@ export class XPathWrapper {
     return resultArray;
   }
 
-  private getExpressionForEvaluate(query: Query): String {
+  private getExpressionForEvaluate(query: Query): string {
     if (query.expression.startsWith(".")) {
       return query.expression;
     } else if (query.expression.startsWith("/")) {
       return "." + query.expression;
-    } else {
-      return query.expression;
+    } else if (query.expression.indexOf("(/") > -1) {
+      //add point between ( and /
+      const splitAt = query.expression.indexOf("(/") + 1;
+      return (
+        query.expression.substring(0, splitAt) +
+        "." +
+        query.expression.substring(splitAt)
+      );
     }
+    return query.expression;
   }
 
   private mapNodeType(nodeType: number): String {
@@ -181,7 +188,10 @@ export class XPathWrapper {
             "'"
         );
       } else if (1 === results.resultType) {
-        console.log("result type 1");
+        resultArray.push({
+          foundNode: {} as ResultNode,
+          numericResult: results.numberValue,
+        });
       } else {
         let result = results.iterateNext();
         let index = 0;
