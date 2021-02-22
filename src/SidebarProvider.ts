@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { DecorationProcessor } from "./DecorationProcessor";
 import { getNonce } from "./getNonce";
 import { Query, QueryResult, ResultNode } from "./types";
 import { XPathWrapper } from "./XPathWrapper";
@@ -76,12 +77,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   private checkXPath(query: Query) {
     if (!query.expression) {
       vscode.window.showInformationMessage("Please enter an expression");
+      this.xpathOut.appendLine("Please enter an expression to start a check");
       return;
     }
     const { activeTextEditor } = vscode.window;
 
     if (!activeTextEditor) {
       vscode.window.showInformationMessage("No active text editor");
+      this.xpathOut.appendLine(
+        "Please make sure that you have a XML document open and active."
+      );
       return;
     }
 
@@ -92,187 +97,68 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       vscode.window.showInformationMessage(
         "Active text editor does not have content"
       );
+      this.xpathOut.appendLine(
+        "Please make sure that you have a XML document open and active."
+      );
       return;
     }
 
     let queryResult: QueryResult[];
     try {
+      const startTime = new Date();
+      this.xpathOut.clear();
       queryResult = this.xpathWrapper.checkXPath(query, xml);
       if (!queryResult || queryResult.length === 0) {
         return;
       }
-      if (queryResult.length === 1 && queryResult[0].numericResult) {
-        this.xpathOut.appendLine(
-          "The query '" +
-            query.expression +
-            "' resulted in: " +
-            queryResult[0].numericResult
-        );
+      if (queryResult.length > 0 && queryResult[0].numericResult) {
+        let sumOfResults: number = 0;
+        if (queryResult.length > 1) {
+          //sum up all the numeric results
+          queryResult.forEach((result) => {
+            if (result.numericResult) {
+              sumOfResults += result.numericResult;
+            }
+          });
+        } else {
+          sumOfResults = queryResult[0].numericResult;
+        }
+        let out = "The expression '" + query.expression;
+        out += this.checkForContext(query.contextNode);
+        out += "' resulted in: " + sumOfResults;
+        this.xpathOut.appendLine(out);
       } else {
+        let out =
+          "Found " +
+          queryResult.length +
+          " results for expression '" +
+          query.expression;
+        out += this.checkForContext(query.contextNode);
+        out += "'";
+        this.xpathOut.appendLine(out);
         this.updateDecorations(queryResult);
+        this.printDuration(query.expression, query.contextNode, startTime);
       }
     } catch (e) {
       vscode.window.showInformationMessage(e.message);
+      console.error(e);
     }
   }
 
-  private addDecoration(
-    activeTextEditor: vscode.TextEditor,
-    startPosition: number,
-    endPosition: number,
-    result: QueryResult,
-    xpathResults: vscode.DecorationOptions[]
-  ) {
-    const startPos = activeTextEditor.document.positionAt(startPosition);
-    const endPos = activeTextEditor.document.positionAt(endPosition);
-
-    const decoration = {
-      range: new vscode.Range(startPos, endPos),
-      hoverMessage:
-        "Node **" +
-        result.foundNode.nodeName +
-        "** is of NodeType **" +
-        result.foundNode.nodeType +
-        "**",
-    };
-    xpathResults.push(decoration);
+  private checkForContext(context: string): string {
+    if (context && "" !== context) {
+      return "' within context '" + context;
+    }
+    return "";
   }
 
-  private applyDecorations(
-    activeTextEditor: vscode.TextEditor,
-    match: number,
-    text: string,
-    result: QueryResult,
-    xpathResults: vscode.DecorationOptions[]
-  ) {
-    if (
-      this.isElementNodeType(result.foundNode.nodeType) &&
-      result.foundNode.childNodes
-    ) {
-      // calculate decoration for opening and closing tags
-      this.addDecoration(
-        activeTextEditor,
-        match,
-        text.indexOf(">", match) + 1,
-        result,
-        xpathResults
-      );
+  private printDuration(expression: string, context: string, startTime: Date) {
+    const duration = new Date().getTime() - startTime.getTime();
 
-      if (result.foundNode.textContent) {
-        //closing tags
-        const startPosition = this.findIndexOfTag(
-          text,
-          "</" + result.foundNode.tagName,
-          match,
-          result.foundNode
-        );
-        this.addDecoration(
-          activeTextEditor,
-          startPosition,
-          text.indexOf(">", startPosition) + 1,
-          result,
-          xpathResults
-        );
-      }
-    } else {
-      this.addDecoration(
-        activeTextEditor,
-        match,
-        match + result.foundNode.textContent.length,
-        result,
-        xpathResults
-      );
-    }
-  }
-
-  private findIndexOfTag(
-    textToSearchIn: string,
-    tagToFind: string,
-    startIndex: number,
-    resultNode: ResultNode
-  ): number {
-    if (!this.isElementNodeType(resultNode.nodeType)) {
-      //we don't have a tag - use textContent instead
-      return textToSearchIn.indexOf(resultNode.textContent, startIndex);
-    } else {
-      let foundIndex = textToSearchIn.indexOf(tagToFind, startIndex);
-      while (foundIndex > -1) {
-        //only when the text at found index ends in a space or > we really found the tag
-        let nextCharacter = textToSearchIn.substr(
-          foundIndex + tagToFind.length,
-          1
-        );
-        if (" " === nextCharacter || ">" === nextCharacter) {
-          return foundIndex;
-        }
-        foundIndex = textToSearchIn.indexOf(tagToFind, foundIndex + 1);
-      }
-      return -1;
-    }
-  }
-
-  private updateDecorationsForNode(
-    result: QueryResult,
-    startOfContextNodeInDom: number,
-    endOfContextNode: number,
-    text: string,
-    textAsDom: string,
-    activeTextEditor: vscode.TextEditor,
-    xpathResults: vscode.DecorationOptions[]
-  ) {
-    //depending on the indexInContext we have to highlight the correct node
-    if (
-      undefined === result.foundNode.indexInContext ||
-      result.foundNode.indexInContext < 0 ||
-      undefined === result.contextNode?.numberOfNodesInContext
-    ) {
-      return;
-    }
-    let match = textAsDom.indexOf(
-      result.foundNode.textContent,
-      startOfContextNodeInDom
-    );
-    let nextMatch = textAsDom.indexOf(result.foundNode.textContent, match + 1);
-    if (nextMatch < 0) {
-      //we only have one match => apply decorations
-      match = this.findIndexOfTag(
-        text,
-        "<" + result.foundNode.tagName,
-        match,
-        result.foundNode
-      );
-      this.applyDecorations(
-        activeTextEditor,
-        match,
-        text,
-        result,
-        xpathResults
-      );
-      return;
-    }
-    let counter = 0;
-    match = this.findIndexOfTag(
-      text,
-      "<" + result.foundNode.tagName,
-      match,
-      result.foundNode
-    );
-    while (counter < result.contextNode.numberOfNodesInContext) {
-      if (match < endOfContextNode) {
-        this.applyDecorations(
-          activeTextEditor,
-          match,
-          text,
-          result,
-          xpathResults
-        );
-      } else {
-        return;
-      }
-
-      match = text.indexOf(result.foundNode.textContent, match + 1);
-      counter++;
-    }
+    let durationText = "The expression '" + expression;
+    durationText += this.checkForContext(context);
+    durationText += "' took " + duration / 1000 + " seconds to evaluate";
+    this.xpathOut.appendLine(durationText);
   }
 
   private updateDecorations(queryResult: QueryResult[]) {
@@ -281,168 +167,21 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     if (!activeTextEditor) {
       return;
     }
-
     const text: string = activeTextEditor.document.getText();
-    const textAsDom: string = this.xpathWrapper.getDomAsString(text);
-    const xpathResults: vscode.DecorationOptions[] = [];
-
-    let match: number;
-    queryResult.forEach((result) => {
-      if (result.contextNode) {
-        this.xpathOut.appendLine(
-          "Context-Node at line: " + result.contextNode.lineNumber
-        );
-        //we need to search for children only inside the context node
-        let startOfContextNodeInDom = textAsDom.indexOf(
-          result.contextNode.textContent,
-          0
-        );
-        let startOfContextNode = this.findIndexOfTag(
-          text,
-          "<" + result.contextNode.tagName,
-          startOfContextNodeInDom,
-          result.contextNode
-        );
-        let endOfContextNode = this.findIndexOfTag(
-          text,
-          "</" + result.contextNode.tagName,
-          startOfContextNode,
-          result.contextNode
-        );
-
-        this.updateDecorationsForNode(
-          result,
-          startOfContextNodeInDom,
-          endOfContextNode,
-          text,
-          textAsDom,
-          activeTextEditor,
-          xpathResults
-        );
-      } else {
-        if (this.isElementNodeType(result.foundNode.nodeType)) {
-          this.updateDecorationsForElementNode(
-            result,
-            textAsDom,
-            text,
-            activeTextEditor,
-            xpathResults
-          );
-        } else {
-          this.updateDecorationsForNonElementNode(
-            result,
-            textAsDom,
-            text,
-            activeTextEditor,
-            xpathResults
-          );
-        }
-      }
-    });
+    const decorationProcesser = new DecorationProcessor(
+      text,
+      this.xpathWrapper.getDomAsString(text),
+      this.xpathOut,
+      activeTextEditor
+    );
+    const xpathResults: vscode.DecorationOptions[] = decorationProcesser.collectDecorations(
+      queryResult
+    );
 
     activeTextEditor.setDecorations(
       this.xpathResultDecorationType,
-      this.removeDuplicateDecorations(xpathResults)
+      xpathResults
     );
-  }
-
-  private removeDuplicateDecorations(
-    decorations: vscode.DecorationOptions[]
-  ): vscode.DecorationOptions[] {
-    let finalDecorations: vscode.DecorationOptions[] = [];
-    let addedDecorations: string[] = [];
-    decorations.forEach((decoration) => {
-      const hash =
-        decoration.range.start.line.toString() +
-        ":" +
-        decoration.range.start.character.toString() +
-        ":" +
-        decoration.range.end.line.toString() +
-        ":" +
-        decoration.range.end.character.toString() +
-        ":" +
-        decoration.hoverMessage;
-      if (addedDecorations.indexOf(hash) > -1) {
-        console.log("Found duplicate entry: " + hash);
-      } else {
-        addedDecorations.push(hash);
-        finalDecorations.push(decoration);
-      }
-    });
-
-    return finalDecorations;
-  }
-
-  private isElementNodeType(nodeType: string): boolean {
-    return "Element" === nodeType;
-  }
-
-  private updateDecorationsForNonElementNode(
-    result: QueryResult,
-    textAsDom: string,
-    text: string,
-    activeTextEditor: vscode.TextEditor,
-    xpathResults: vscode.DecorationOptions[]
-  ) {
-    console.log(
-      "FoundNode is not of type Element but " + result.foundNode.nodeType
-    );
-
-    let match = text.indexOf(result.foundNode.textContent);
-    while (match > -1) {
-      this.applyDecorations(
-        activeTextEditor,
-        match,
-        text,
-        result,
-        xpathResults
-      );
-
-      match = text.indexOf(result.foundNode.textContent, match + 1);
-    }
-  }
-
-  private updateDecorationsForElementNode(
-    result: QueryResult,
-    textAsDom: string,
-    text: string,
-    activeTextEditor: vscode.TextEditor,
-    xpathResults: vscode.DecorationOptions[]
-  ) {
-    let match = textAsDom.indexOf(result.foundNode.textContent);
-    while (match > -1) {
-      //we need to reset match because it can differ from the content of the window to how it is represented in the dom
-      match = this.findIndexOfTag(
-        text,
-        "<" + result.foundNode.tagName,
-        match,
-        result.foundNode
-      );
-      this.applyDecorations(
-        activeTextEditor,
-        match,
-        text,
-        result,
-        xpathResults
-      );
-
-      const foundLastIndex = this.findIndexOfTag(
-        text,
-        "</" + result.foundNode.tagName,
-        match,
-        result.foundNode
-      );
-      if (foundLastIndex < match) {
-        this.xpathOut.appendLine(
-          "Unable to apply highlighting for Node: " + result.foundNode.nodeName
-        );
-        return;
-      }
-      match = textAsDom.indexOf(
-        result.foundNode.textContent,
-        foundLastIndex + 1
-      );
-    }
   }
 
   public revive(panel: vscode.WebviewView) {

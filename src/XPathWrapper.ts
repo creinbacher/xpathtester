@@ -9,6 +9,7 @@ export class XPathWrapper {
       return [];
     }
     let doc: any;
+
     try {
       doc = new this.dom().parseFromString(xml);
     } catch (e) {
@@ -54,12 +55,21 @@ export class XPathWrapper {
     return resultArray;
   }
 
-  private getExpressionForEvaluate(query: Query): String {
+  private getExpressionForEvaluate(query: Query): string {
     if (query.expression.startsWith(".")) {
       return query.expression;
-    } else {
+    } else if (query.expression.startsWith("/")) {
       return "." + query.expression;
+    } else if (query.expression.indexOf("(/") > -1) {
+      //add point between ( and /
+      const splitAt = query.expression.indexOf("(/") + 1;
+      return (
+        query.expression.substring(0, splitAt) +
+        "." +
+        query.expression.substring(splitAt)
+      );
     }
+    return query.expression;
   }
 
   private mapNodeType(nodeType: number): String {
@@ -177,6 +187,11 @@ export class XPathWrapper {
             query.contextNode +
             "'"
         );
+      } else if (1 === results.resultType) {
+        resultArray.push({
+          foundNode: {} as ResultNode,
+          numericResult: results.numberValue,
+        });
       } else {
         let result = results.iterateNext();
         let index = 0;
