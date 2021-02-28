@@ -2,21 +2,10 @@ import * as vscode from "vscode";
 import { Position } from "vscode";
 import { QueryResult, ResultNode } from "./types";
 export class DecorationProcessor {
-  private text: string;
-  private textAsDom: string;
   private xpathOut: vscode.OutputChannel;
-  private activeTextEditor: vscode.TextEditor;
 
-  constructor(
-    text: string,
-    textAsDom: string,
-    xpathOut: vscode.OutputChannel,
-    activeTextEditor: vscode.TextEditor
-  ) {
-    this.text = text;
-    this.textAsDom = textAsDom;
+  constructor(xpathOut: vscode.OutputChannel) {
     this.xpathOut = xpathOut;
-    this.activeTextEditor = activeTextEditor;
   }
 
   private collectDecorationElementNodeStart(

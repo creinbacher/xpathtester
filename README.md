@@ -15,9 +15,7 @@ This extension allows you to evaluate simple XPath expressions on the currently 
 
 ## Release Notes
 
-### 1.0.0
-
-Initial release of the XPath Tester extension
+Please refert to the [changelog](CHANGELOG.md)
 
 ## Future plans
 

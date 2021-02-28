@@ -175,12 +175,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       return;
     }
     const text: string = activeTextEditor.document.getText();
-    const decorationProcesser = new DecorationProcessor(
-      text,
-      this.xpathWrapper.getDomAsString(text),
-      this.xpathOut,
-      activeTextEditor
-    );
+    const decorationProcesser = new DecorationProcessor(this.xpathOut);
     const xpathResults: vscode.DecorationOptions[] = decorationProcesser.collectDecorationsV2(
       queryResult
     );
