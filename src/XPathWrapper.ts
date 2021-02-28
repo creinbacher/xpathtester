@@ -224,6 +224,7 @@ export class XPathWrapper {
     }
 
     if (!nodes || nodes.length === 0) {
+      console.log(doc);
       throw new Error(
         "Expression '" + expression + "'not found in given XML document"
       );
