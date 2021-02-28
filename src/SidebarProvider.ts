@@ -109,9 +109,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       this.xpathOut.clear();
       queryResult = this.xpathWrapper.checkXPath(query, xml);
       if (!queryResult || queryResult.length === 0) {
+        let out = "Found no results for expression '" + query.expression;
+        out += this.checkForContext(query.contextNode);
+        out += "'";
+        this.xpathOut.appendLine(out);
         return;
       }
-      if (queryResult.length > 0 && queryResult[0].numericResult) {
+      if (
+        queryResult.length > 0 &&
+        undefined !== queryResult[0].numericResult
+      ) {
         let sumOfResults: number = 0;
         if (queryResult.length > 1) {
           //sum up all the numeric results
@@ -174,7 +181,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       this.xpathOut,
       activeTextEditor
     );
-    const xpathResults: vscode.DecorationOptions[] = decorationProcesser.collectDecorations(
+    const xpathResults: vscode.DecorationOptions[] = decorationProcesser.collectDecorationsV2(
       queryResult
     );
 
