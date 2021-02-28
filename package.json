@@ -2,7 +2,7 @@
   "name": "xpathtester",
   "displayName": "XPath Tester",
   "description": "This extension lets you evaluate XPath expressions from the sidebar",
-  "version": "2.0.1",
+  "version": "1.1.0",
   "publisher": "creinbacher",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
