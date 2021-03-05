@@ -1,38 +1,21 @@
 import * as vscode from "vscode";
 import { DecorationProcessor } from "./DecorationProcessor";
 import { getNonce } from "./getNonce";
-import { Query, QueryResult, ResultNode } from "./types";
+import { Query, QueryResult } from "./types";
 import { XPathWrapper } from "./XPathWrapper";
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
   _view?: vscode.WebviewView;
   _doc?: vscode.TextDocument;
   xpathOut: vscode.OutputChannel;
-
-  private xpathResultDecorationType = vscode.window.createTextEditorDecorationType(
-    {
-      borderWidth: "1px",
-      borderStyle: "solid",
-      overviewRulerColor: "blue",
-      overviewRulerLane: vscode.OverviewRulerLane.Right,
-      light: {
-        // this color will be used in light color themes
-        borderColor: "darkblue",
-        backgroundColor: "#FF000055",
-      },
-      dark: {
-        // this color will be used in dark color themes
-        borderColor: "lightblue",
-        backgroundColor: "#FF000055",
-      },
-    }
-  );
+  resultDecorationTypes: vscode.TextEditorDecorationType;
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
     private readonly xpathWrapper: XPathWrapper
   ) {
     this.xpathOut = vscode.window.createOutputChannel("XPath");
+    this.resultDecorationTypes = this.getResultDecorationType();
   }
 
   public resolveWebviewView(webviewView: vscode.WebviewView) {
@@ -68,6 +51,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             return;
           }
           this.checkXPath(data.value);
+          this.xpathOut.show();
           break;
         }
       }
@@ -90,7 +74,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    activeTextEditor.setDecorations(this.xpathResultDecorationType, []);
+    activeTextEditor.setDecorations(this.resultDecorationTypes, []);
 
     const xml = activeTextEditor.document.getText();
     if (!xml) {
@@ -107,6 +91,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     try {
       const startTime = new Date();
       this.xpathOut.clear();
+
       queryResult = this.xpathWrapper.checkXPath(query, xml);
       if (!queryResult || queryResult.length === 0) {
         let out = "Found no results for expression '" + query.expression;
@@ -180,10 +165,29 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       queryResult
     );
 
-    activeTextEditor.setDecorations(
-      this.xpathResultDecorationType,
-      xpathResults
-    );
+    activeTextEditor.setDecorations(this.resultDecorationTypes, xpathResults);
+  }
+
+  private getResultDecorationType(): vscode.TextEditorDecorationType {
+    const config = vscode.workspace.getConfiguration("xpathtester");
+
+    return vscode.window.createTextEditorDecorationType({
+      borderWidth: config.get("styling.borderWidth"),
+      borderStyle: config.get("styling.borderStyle"),
+      overviewRulerLane: vscode.OverviewRulerLane.Right,
+      light: {
+        // this color will be used in light color themes
+        overviewRulerColor: config.get("styling.lightTheme.overviewRulerColor"),
+        borderColor: config.get("styling.lightTheme.borderColor"),
+        backgroundColor: config.get("styling.lightTheme.backgroundColor"),
+      },
+      dark: {
+        // this color will be used in dark color themes
+        overviewRulerColor: config.get("styling.darkTheme.overviewRulerColor"),
+        borderColor: config.get("styling.darkTheme.borderColor"),
+        backgroundColor: config.get("styling.darkTheme.backgroundColor"),
+      },
+    });
   }
 
   public revive(panel: vscode.WebviewView) {
