@@ -68,6 +68,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             return;
           }
           this.checkXPath(data.value);
+          this.xpathOut.show();
           break;
         }
       }
@@ -107,6 +108,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     try {
       const startTime = new Date();
       this.xpathOut.clear();
+
       queryResult = this.xpathWrapper.checkXPath(query, xml);
       if (!queryResult || queryResult.length === 0) {
         let out = "Found no results for expression '" + query.expression;
