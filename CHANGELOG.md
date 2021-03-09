@@ -7,13 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] - 2021-07-28
+## [1.2.0] - 2021-03-09
+
+### Added
+
+- Added settings so you can change the look of the extension
+- OutputChannel is now activated once you click 'check'
+
+### Changed
+
+- Improved readme
+- Fixed wrong releasedate for version 1.1.0 in changelog
+
+## [1.1.0] - 2021-02-28
 
 ### Added
 
 - Information about the processed query, results and duration are now logged in a seperate OutputChannel called 'XPath'
 - Functions like count() or sum() are now supported
-- More inputvalidation to prevent errors while executing the query
+- More input validation to prevent errors while executing the query
 
 ### Changed
 
