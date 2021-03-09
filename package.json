@@ -25,42 +25,42 @@
         "xpathtester.styling.borderWidth": {
           "type": "string",
           "default": "1px",
-          "description": "CSS styling property: change the border with for the result highlighting. Please reload the extension for changes to take place."
+          "description": "CSS styling property: change the border width of the result highlighting."
         },
         "xpathtester.styling.borderStyle": {
           "type": "string",
           "default": "solid",
-          "description": "CSS styling property: change the border style for the result highlighting. Please reload the extension for changes to take place."
+          "description": "CSS styling property: change the border style of the result highlighting."
         },
         "xpathtester.styling.lightTheme.overviewRulerColor": {
           "type": "string",
           "default": "darkblue",
-          "description": "The color of the decoration in the overview ruler for light themes. Please reload the extension for changes to take place."
+          "description": "The color of the decoration in the overview ruler for light themes."
         },
         "xpathtester.styling.lightTheme.borderColor": {
           "type": "string",
           "default": "darkblue",
-          "description": "CSS styling property: change the border color for the result highlighting for light themes. Please reload the extension for changes to take place."
+          "description": "CSS styling property: change the border color of the result highlighting for light themes."
         },
         "xpathtester.styling.lightTheme.backgroundColor": {
           "type": "string",
           "default": "#0022FF55",
-          "description": "CSS styling property: change the background color for the result highlighting for light themes. Please reload the extension for changes to take place."
+          "description": "CSS styling property: change the background color of the result highlighting for light themes."
         },
         "xpathtester.styling.darkTheme.overviewRulerColor": {
           "type": "string",
           "default": "lightblue",
-          "description": "The color of the decoration in the overview ruler for dark themes. Please reload the extension for changes to take place."
+          "description": "The color of the decoration in the overview ruler for dark themes."
         },
         "xpathtester.styling.darkTheme.borderColor": {
           "type": "string",
           "default": "darkblue",
-          "description": "CSS styling property: change the border color for the result highlighting for dark themes. Please reload the extension for changes to take place."
+          "description": "CSS styling property: change the border color of the result highlighting for dark themes."
         },
         "xpathtester.styling.darkTheme.backgroundColor": {
           "type": "string",
           "default": "#FF000055",
-          "description": "CSS styling property: change the background color for the result highlighting for dark themes. Please reload the extension for changes to take place."
+          "description": "CSS styling property: change the background color of the result highlighting for dark themes."
         }
       }
     },
